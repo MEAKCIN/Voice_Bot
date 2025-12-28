@@ -1,21 +1,29 @@
-# Use NVIDIA CUDA base image for GPU support
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+# Use NVIDIA CUDA 12.4 runtime base (matches torch 2.5.1+cu124)
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
 # Set non-interactive installation
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
-# python3-pyaudio and portaudio19-dev are for sounddevice
-# alsa-utils is for aplay/arecord (used in bot.py)
+# We add deadsnakes PPA to get Python 3.11 on Ubuntu 22.04
 RUN apt-get update && apt-get install -y \
-    python3.10 \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
     python3-pip \
-    python3-venv \
     alsa-utils \
     portaudio19-dev \
     git \
     libsndfile1 \
+    liblzma-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Install pip for Python 3.11
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
 # Set working directory
 WORKDIR /app
@@ -24,9 +32,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-# Upgrade pip first
-RUN python3.10 -m pip install --upgrade pip
-RUN python3.10 -m pip install -r requirements.txt
+RUN python3.11 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -38,6 +44,4 @@ EXPOSE 8002
 ENV PYTHONUNBUFFERED=1
 
 # Command to run the bot
-# Note: For audio input/output to work from a container, you typically need to pass devices
-# e.g. docker run --device /dev/snd ...
-CMD ["python3.10", "src/bot.py"]
+CMD ["python3.11", "src/bot.py"]
