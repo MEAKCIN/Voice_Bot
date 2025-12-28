@@ -10,3 +10,4 @@ zoom_amd64.deb
 models/
 scripts/download.sh
 *.log
+token.txt
