@@ -1,11 +1,46 @@
+import sys
+try:
+    import lzma
+except ImportError:
+    try:
+        from backports import lzma
+        sys.modules['lzma'] = lzma
+    except ImportError:
+        pass
+
 import os
 import torch
+import torch
+# Monkeypatch torch.load to handle PyTorch 2.6+ secure default
+# Coqui TTS relies on pickling custom objects
+_original_load = torch.load
+def unsafe_load(*args, **kwargs):
+    if 'weights_only' not in kwargs:
+        kwargs['weights_only'] = False
+    return _original_load(*args, **kwargs)
+torch.load = unsafe_load
+
 import uvicorn
 from fastapi import FastAPI, Response, HTTPException
 from pydantic import BaseModel
 import io
 import numpy as np
 import scipy.io.wavfile
+
+import torchaudio
+# Force soundfile backend by monkeypatching load
+# This works around torchaudio 2.6 defaulting to missing torchcodec
+_original_audio_load = torchaudio.load
+def safe_audio_load(*args, **kwargs):
+    kwargs['backend'] = 'soundfile'
+    try:
+        return _original_audio_load(*args, **kwargs)
+    except Exception as e:
+        print(f"Error in torchaudio.load with soundfile: {e}")
+        # Last ditch: try without backend arg if soundfile fails?
+        # But we know soundfile is what we want.
+        raise e
+torchaudio.load = safe_audio_load
 
 # Import XTTS classes directly
 from TTS.tts.configs.xtts_config import XttsConfig
@@ -27,7 +62,12 @@ try:
     config.load_json(CONFIG_PATH)
     model = Xtts.init_from_config(config)
     model.load_checkpoint(config, checkpoint_dir=MODEL_PATH, eval=True)
-    model.to(DEVICE)
+    try:
+        model.to(DEVICE)
+    except Exception as e:
+        print(f"Failed to move model to {DEVICE} ({e}), falling back to CPU")
+        DEVICE = "cpu"
+        model.to(DEVICE)
 except Exception as e:
     print(f"Error initializing Local XTTS: {e}")
     exit(1)

@@ -10,5 +10,10 @@ uvicorn
 scipy
 TTS
 # For Silero VAD & Core
-torch
-torchaudio
+# Pin older torch to avoid 2.6 breaking changes and torchaudio backend issues
+torch==2.5.1
+torchaudio==2.5.1
+# Pin transformers for TTS compatibility
+transformers==4.41.2
+# Fix for missing lzma in some python builds
+backports.lzma; python_version < "3.13"
