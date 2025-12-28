@@ -1,0 +1,14 @@
+faster-whisper
+sounddevice
+requests
+numpy
+onnxruntime-gpu
+colorama
+# API Server
+fastapi
+uvicorn
+scipy
+TTS
+# For Silero VAD & Core
+torch
+torchaudio

@@ -1,0 +1,12 @@
+__pycache__/
+.venv/
+.venv_xtts/
+.env
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+zoom_amd64.deb
+models/
+scripts/download.sh
+*.log
